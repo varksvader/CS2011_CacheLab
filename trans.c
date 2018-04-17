@@ -1,3 +1,7 @@
+// Nils Backe nabacke
+// Varnika Sinha vsinha2
+// Team name: i_need_arrays
+
 /* 
  * trans.c - Matrix transpose B = A^T
  *
