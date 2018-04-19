@@ -25,7 +25,7 @@
 */
 
 // Memory address var specifically to hold 64 bits
-typedef unsigned long long int mem_addr_t;
+typedef unsigned long int mem_addr_t;
 
 // Structs
 // Cache parameters
@@ -63,11 +63,13 @@ typedef struct {
  * Main method of program
  * @param argc number of command line arguments
  * @param argv the string of command line arguments
- * @return 0 if successfully exited
+ * @return 0 if successfully exited, 1 if not
  */
 int main(int argc, char **argv) {
-    printSummary(0, 0, 0);
-    return 0;
+  // Set cache parameters
+
+  printSummary(0, 0, 0);
+  return 0;
 }
 
 /**
@@ -82,6 +84,10 @@ int main(int argc, char **argv) {
    printf("-b <b>: Number of block bits (the block size is 2^b)\n");
    printf("-t <tracefile>: Name of valgrind trace to replay\n");
  }
+
+ /**
+  * Building the cache from scratch
+  */
 
 /**
  * Prints out summary of the cache
