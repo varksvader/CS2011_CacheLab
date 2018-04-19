@@ -63,6 +63,7 @@ typedef struct {
  * Main method of program
  * @param argc number of command line arguments
  * @param argv the string of command line arguments
+ * @return 0 if successfully exited
  */
 int main(int argc, char **argv) {
     printSummary(0, 0, 0);
