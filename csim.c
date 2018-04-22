@@ -1,4 +1,8 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <getopt.h>
+#include <unistd.h>
+#include <math.h>
 #include "cachelab.h"
 
 // Nils Backe nabacke
@@ -25,7 +29,7 @@
 */
 
 // Memory address var specifically to hold 64 bits
-typedef unsigned long int mem_addr_t;
+typedef unsigned long mem_addr_t;
 
 // Structs
 // Cache parameters
@@ -45,7 +49,6 @@ typedef struct {
 typedef struct {
   int valid;
   mem_addr_t tag;
-  char* data;
   int lastUsed;
 } cache_line;
 
@@ -59,6 +62,13 @@ typedef struct {
   cache_set *sets;
 } cache;
 
+void simulateCache(cache* c, cache_param* param, mem_addr_t address);
+cache* buildCache(int numSets, int numLines, int blockSize);
+int getNextEvictedLine(cache_set currentSet, cache_param* param);
+mem_addr_t calculateSetIndex(cache_param* param, mem_addr_t address);
+void freeCache(cache* c, int numSets, int numLines, int blockSize);
+void printUsage(void);
+
 /**
  * Main method of program
  * @param argc number of command line arguments
@@ -66,10 +76,187 @@ typedef struct {
  * @return 0 if successfully exited, 1 if not
  */
 int main(int argc, char **argv) {
-  // Set cache parameters
+  cache* c;
+  int s = 0;
+  int b = 0;
+  int E = 0;
+  int S = 0; // 2 ^ s
+  int B = 0; // 2 ^ b
+  char* traceString;
+  cache_param* param;
+  FILE* traceFile;
 
-  printSummary(0, 0, 0);
+  // allocate memory for cache_param
+  param = (cache_param*) malloc(sizeof(cache_param));
+
+  // Read in command line arguments
+  char ch;
+  while ((ch = getopt(argc, argv, "s:E:b:t:vh")) != -1) {
+    if (ch == 'h') {
+      printUsage();
+      return 0;
+    } else if (ch == 'v') {
+      // verbose mode
+    } else if (ch == 's') {
+      s = atoi(optarg);
+    } else if (ch == 'E') {
+      E = atoi(optarg);
+    } else if (ch == 'b') {
+      b = atoi(optarg);
+    } else if (ch == 't') {
+      traceString = optarg;
+    }
+  }
+
+  // Set cache parameters
+  S = pow(2, s);
+  B = pow(2, b);
+  param->s = s;
+  param->b = b;
+  param->E = E;
+  param->S = S;
+  param->B = B;
+  param->hits = 0;
+  param->misses = 0;
+  param->evictions = 0;
+
+  c = buildCache(S, E, B);
+  traceFile = fopen(traceString, "r");
+  if (!traceFile) {
+    printf("Could not open file.\n");
+    return 1;
+  }
+
+  char operation = 0;
+  mem_addr_t address = 0;
+  int size = 0;
+
+  // "char unsigned long, int"
+  while (fscanf(traceFile, " %c %lu,%d", &operation, &address, &size) == 3) {
+    printf("%c %lu,%d ", operation, address, size);
+    if (operation == 'L' || operation == 'S') {
+      simulateCache(c, param, address);
+    } else if (operation == 'M') { // a load and a store
+      simulateCache(c, param, address);
+      simulateCache(c, param, address);
+    }
+  }
+
+  printSummary(param->hits, param->misses, param->evictions);
+  fclose(traceFile);
+  free(param);
+  freeCache(c, S, E, B);
   return 0;
+}
+
+cache* buildCache(int numSets, int numLines, int blockSize) {
+  // Allocate cache
+  cache* c = (cache*) malloc(sizeof(cache));
+
+  // Allocate cache sets
+  c->sets = (cache_set*) malloc(sizeof(cache_set) * numSets);
+
+  // for every set
+  for (int i = 0; i < numSets; i++) {
+    // Allocate cache lines
+    c->sets[i].lines = (cache_line*) malloc(sizeof(cache_line) * numLines);
+
+    // Allocate each line
+    for (int j = 0; j < numLines; j++) {
+      cache_line line;
+      // set defaults
+      line.valid = 0;
+      line.tag = 0;
+      line.lastUsed = 0;
+      c->sets[i].lines[j] = line;
+    }
+  }
+  return c;
+}
+
+void simulateCache(cache* c, cache_param* param, mem_addr_t address) {
+  mem_addr_t setIndex = calculateSetIndex(param, address); // need to calculate
+  cache_set currentSet = c->sets[setIndex];
+
+  mem_addr_t tag = address >> (param->s + param->b); // tag is address shifted by the
+  // number of block bits and the number of set index bits
+
+  int cacheIsFull = 1; // 0 or 1, 0 if not full, 1 if full
+  int emptyIndex = 0; // the index of an empty cache line, used if cache miss
+
+  int cacheHit = 0; // 0 or 1, 0 if miss, 1 if hit
+
+  // loop through all the lines in the set
+  for (int i = 0; i < param->E; i++) {
+    cache_line line = currentSet.lines[i];
+    if (line.valid && line.tag == tag) {
+      // cache hit!
+      cacheHit = 1;
+      param->hits++;
+      line.lastUsed++;
+      printf("hit\n");
+    } else if (!line.valid) {
+      cacheIsFull = 0; // there is empty space in the cache
+      emptyIndex = i;
+      // saves the last empty line in the cache
+    }
+  }
+
+  if (cacheHit) {
+    // nothing else to do
+    return;
+  } else {
+    param->misses++;
+    printf("miss\n");
+  }
+
+  if (cacheIsFull) { // eviction required
+    int evictIndex = getNextEvictedLine(currentSet, param);
+    currentSet.lines[evictIndex].valid = 1;
+    currentSet.lines[evictIndex].tag = tag;
+    currentSet.lines[evictIndex].lastUsed = 0;
+    param->evictions++;
+    printf("eviction\n");
+  } else { // fill in empty line
+    currentSet.lines[emptyIndex].valid = 1;
+    currentSet.lines[emptyIndex].tag = tag;
+    currentSet.lines[emptyIndex].lastUsed = 0;
+  }
+
+  return;
+}
+
+// finds the line in the given set that is next up for evictions
+// the line with the greatest lastUsed
+int getNextEvictedLine(cache_set currentSet, cache_param* param) {
+  int evictionIndex = 0;
+  int maxLastUsed = 0;
+  for (int i = 0; i < param->E; i++) {
+    if (currentSet.lines[i].lastUsed >= maxLastUsed) {
+      maxLastUsed = currentSet.lines[i].lastUsed;
+      evictionIndex = i;
+    }
+  }
+  return evictionIndex;
+}
+
+mem_addr_t calculateSetIndex(cache_param* param, mem_addr_t address) {
+  int addressLength = sizeof(mem_addr_t) * 8; // * 8 to get number of bits (not bytes)
+  int sizeOfTag = addressLength - param->s - param->b;
+  mem_addr_t setIndex = (address << sizeOfTag) >> sizeOfTag; // get rid of tag bits
+  printf("%lu", setIndex >> param->b);
+  return setIndex >> param->b; // get rid of block bits
+}
+
+void freeCache(cache* c, int numSets, int numLines, int blockSize) {
+  for (int i = 0; i < numSets; i++) {
+    if (c->sets[i].lines != NULL) {
+      free(c->sets[i].lines);
+    }
+  }
+  if (c->sets != NULL) {
+    free(c->sets);
+  }
 }
 
 /**
@@ -84,17 +271,3 @@ int main(int argc, char **argv) {
    printf("-b <b>: Number of block bits (the block size is 2^b)\n");
    printf("-t <tracefile>: Name of valgrind trace to replay\n");
  }
-
- /**
-  * Building the cache from scratch
-  */
-
-/**
- * Prints out summary of the cache
- * @param hits number of hits from the cache
- * @param misses number of misses from the cache
- * @param evictions number of evictions from the cache
- */
-void printSummary(int hits, int misses, int evictions) {
-	printf("hits:%d misses:%d evictions%d", hits, misses, evictions);
-}
