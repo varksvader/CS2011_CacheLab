@@ -120,8 +120,9 @@ int main(int argc, char **argv) {
   param->misses = 0;
   param->evictions = 0;
 
-  c = buildCache(S, E, B);
-  traceFile = fopen(traceString, "r");
+  // Allocate the cache
+  c = buildCache(S, E);
+  traceFile = fopen(traceString, "r"); // read file
   if (!traceFile) {
     printf("Could not open file.\n");
     return 1;
@@ -131,6 +132,7 @@ int main(int argc, char **argv) {
   mem_addr_t address = 0;
   int size = 0;
 
+  // interpret file
   // "char unsigned long, int"
   while (fscanf(traceFile, " %c %lu,%d", &operation, &address, &size) == 3) {
     printf("%c %lu,%d ", operation, address, size);
@@ -149,7 +151,13 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-cache* buildCache(int numSets, int numLines, int blockSize) {
+/**
+ * Returns an allocated cache struct
+ * @param numSets S, the number of sets in the cache
+ * @param numLines E, the number of lines per cache
+ * @return An allocated cache struct
+ */
+cache* buildCache(int numSets, int numLines) {
   // Allocate cache
   cache* c = (cache*) malloc(sizeof(cache));
 
@@ -174,8 +182,15 @@ cache* buildCache(int numSets, int numLines, int blockSize) {
   return c;
 }
 
+/**
+ * Simulates a cache retrieval
+ * @param c A pointer to a cache struct
+ * @param param A pointer to a cache_param struct
+ * @param address The address to retrieve from the cache
+ */
 void simulateCache(cache* c, cache_param* param, mem_addr_t address) {
-  mem_addr_t setIndex = calculateSetIndex(param, address); // need to calculate
+  // get the set from the set bits of the address
+  mem_addr_t setIndex = calculateSetIndex(param, address);
   cache_set currentSet = c->sets[setIndex];
 
   mem_addr_t tag = address >> (param->s + param->b); // tag is address shifted by the
@@ -226,11 +241,17 @@ void simulateCache(cache* c, cache_param* param, mem_addr_t address) {
   return;
 }
 
-// finds the line in the given set that is next up for evictions
-// the line with the greatest lastUsed
+/**
+ * Finds the line in the given set that is next up for evictions
+ * The line with the greatest lastUsed
+ * @param currentSet The cache_set struct that is being considered
+ * @param param A pointer to a cache_param struct
+ * @return the index of the line that is next up for eviction
+ */
 int getNextEvictedLine(cache_set currentSet, cache_param* param) {
   int evictionIndex = 0;
   int maxLastUsed = 0;
+  // simple find max value in array loop
   for (int i = 0; i < param->E; i++) {
     if (currentSet.lines[i].lastUsed >= maxLastUsed) {
       maxLastUsed = currentSet.lines[i].lastUsed;
@@ -240,6 +261,12 @@ int getNextEvictedLine(cache_set currentSet, cache_param* param) {
   return evictionIndex;
 }
 
+/**
+ * Returns the set index from the given address
+ * @param param A pointer to a cache_param struct
+ * @param address The address that is being considered
+ * @return The set index for the given address
+ */
 mem_addr_t calculateSetIndex(cache_param* param, mem_addr_t address) {
   int addressLength = sizeof(mem_addr_t) * 8; // * 8 to get number of bits (not bytes)
   int sizeOfTag = addressLength - param->s - param->b;
@@ -248,6 +275,13 @@ mem_addr_t calculateSetIndex(cache_param* param, mem_addr_t address) {
   return setIndex >> param->b; // get rid of block bits
 }
 
+/**
+ * Frees all of the allocated pointers to structs
+ * @param c A pointer to a cache struct
+ * @param numSets The number of sets in the cache
+ * @param numLines The number of lines per set
+ * @param blockSize The block size
+ */
 void freeCache(cache* c, int numSets, int numLines, int blockSize) {
   for (int i = 0; i < numSets; i++) {
     if (c->sets[i].lines != NULL) {
