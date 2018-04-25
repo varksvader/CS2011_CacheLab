@@ -63,7 +63,7 @@ typedef struct {
 } cache;
 
 void simulateCache(cache* c, cache_param* param, mem_addr_t address);
-cache* buildCache(int numSets, int numLines, int blockSize);
+cache* buildCache(int numSets, int numLines /*, int blockSize*/);
 int getNextEvictedLine(cache_set currentSet, cache_param* param);
 mem_addr_t calculateSetIndex(cache_param* param, mem_addr_t address);
 void freeCache(cache* c, int numSets, int numLines, int blockSize);
