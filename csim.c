@@ -134,14 +134,15 @@ int main(int argc, char **argv) {
 
   // interpret file
   // "char unsigned long, int"
-  while (fscanf(traceFile, " %c %lu,%d", &operation, &address, &size) == 3) {
-    printf("%c %lu,%d ", operation, address, size);
+  while (fscanf(traceFile, " %c %lx,%d", &operation, &address, &size) == 3) {
+    printf("%c %lx,%d ", operation, address, size);
     if (operation == 'L' || operation == 'S') {
       simulateCache(c, param, address);
     } else if (operation == 'M') { // a load and a store
       simulateCache(c, param, address);
       simulateCache(c, param, address);
     }
+    printf("\n");
   }
 
   printSummary(param->hits, param->misses, param->evictions);
