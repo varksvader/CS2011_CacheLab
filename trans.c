@@ -2,6 +2,20 @@
 // Varnika Sinha vsinha2
 // Team name: i_need_arrays
 
+/* Ideas in Lab:
+ * Givens:
+ *  - E = 1 (line per set)
+ *  - s = 5 (2^5 = 32 sets)
+ *  - b = 5 (2^5 = 32 bytes per line)
+ *  - 32x32 matrix (1024 elements, 1024*4 = 4096 bytes)
+ *  ^ different for 64x64 and 67x61
+ * Approaches:
+ *  - Transpose blocks of matrix that gets stored fully in the cache at once
+ * Ex with 32x32: 32*32*4 = 4096/1024 = 4 (wraps around 4 times), 32/4 = 8 (block size that can be held in cache)
+ * Ex with 64x64: 64*64*4 = 16384/1024 = 16 (wraps around 16 times), 64/4 = 16 (block size that can be held in cache)
+ * Advice: Do diagonals last so you don't overwrite current cache lines (makes it more optimized)
+ */
+
 /* 
  * trans.c - Matrix transpose B = A^T
  *
