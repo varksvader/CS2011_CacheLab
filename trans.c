@@ -1,6 +1,6 @@
 // Nils Backe nabacke
 // Varnika Sinha vsinha2
-// Team name: i_need_arrays
+// Team name: nabacke_vsinha2 (i_need_arrays)
 
 /* Ideas in Lab:
  * Givens:
@@ -39,29 +39,39 @@ int is_transpose(int M, int N, int A[N][M], int B[M][N]);
  */
 char transpose_submit_desc[] = "Transpose submission";
 void transpose_submit(int M, int N, int A[N][M], int B[M][N]) {
-  int i, j, rowBlock, colBlock; // i is the row number, j is the column number
-	int diag = 0;
-	int temp = 0; // variable to hold diagonal
+  int i; // the current row number of the element in matrix A to be tranposed
+  int j; // the current column number of the element in matrix A to be transpose
+  int rowBlock; // the size of the block being transposed in terms of rows
+  int colBlock; // the size of the block being transposed in terms of columns
+  int diag = 0; // the current row and column number of the diagonal
+  int temp = 0; // var to hold the current diagonal of the row
 	/* The access pattern for the defined problem sizes incorporate blocking;
    we define a sub-matrix of the matrix A with some size b to be a square block.
    The outer-loops iterate across these block structures, with the two inner loops
    iterating through each block. */
+  // If 32x32 matrix
 	if (N == 32) {
-		//
+    // Iterate through matrix using column-major iteration over blocks
+    // Goes through each column block in matrix
 		for (colBlock = 0; colBlock < N; colBlock += 8) {
+      // Goes through each row block in matrix
 			for (rowBlock = 0; rowBlock < N; rowBlock += 8) {
+        // Iterate over each row using row-major iteration
+        // Goes through each row in the block
 				for (i = rowBlock; i < rowBlock + 8; i++) {
+          // Goes through each column in that row
 					for (j = colBlock; j < colBlock + 8; j++) {
-						if (i != j) {
+            // Checks if diagonal
+						if (i != j) { // if not, sets tranposed element to correct place
 							B[j][i] = A[i][j];
 						}
-						 else {
+						 else { // otherwise holds on to it to avoid a cache miss
 							//Reduce misses m < i*j in B by storing in temp instead of missing in B[j][i]
 							temp = A[i][j];
 							diag = i;
 						}
 					}
-					//Transpose of a square-matrix has a unique property; no need to move elements on the diagonal.
+					// If at diagonal, sets the diagonal we held on to before
 					if (rowBlock == colBlock) {
 						//Misses in B reduced to m < i
 						B[diag][diag] = temp;
@@ -70,74 +80,69 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N]) {
 			}
 		}
 	}
+  // if 64x64 matrix
 	else if (N == 64) {
-		//Iterate through matrix using column-major iteration over blocks
+    // Iterate through matrix using column-major iteration over blocks
+    // Goes through each column block in matrix
 		for (colBlock = 0; colBlock < N; colBlock += 4) {
+      // Goes through each row block in matrix
 			for (rowBlock = 0; rowBlock < N; rowBlock += 4) {
-				//Iterate over each row using row-major iteration
+        // Iterate over each row using row-major iteration
+        // Goes through each row in the block
 				for (i = rowBlock; i < rowBlock + 4; i++) {
+          // Goes through each column in that row
 					for (j = colBlock; j < colBlock + 4; j++) {
-						if (i != j) {
+            // Checks if diagonal
+						if (i != j) { // if not, sets tranposed element to correct place
 							B[j][i] = A[i][j];
 						}
-						else {
-							//On the diagonal
+						 else { // otherwise holds on to it to avoid a cache miss
+							//Reduce misses m < i*j in B by storing in temp instead of missing in B[j][i]
 							temp = A[i][j];
 							diag = i;
 						}
 					}
+					// If at diagonal, sets the diagonal we held on to before
 					if (rowBlock == colBlock) {
+						//Misses in B reduced to m < i
 						B[diag][diag] = temp;
 					}
 				}
 			}
 		}
 	}
+  // other odd shaped matrix
 	else {
-		//Iterate through matrix using column-major iteration over blocks
+    // Iterate through matrix using column-major iteration over blocks
+    // Goes through each column block in matrix
 		for (colBlock = 0; colBlock < M; colBlock += 16) {
+      // Goes through each row block in matrix
 			for (rowBlock = 0; rowBlock < N; rowBlock += 16) {
+        // Iterate over each row using row-major iteration
 				// Since our sizes are prime, not all blocks will be square sub-matrices
 				// Consider corner-case when (rowBlock + 16 > N) => invalid access. Explicit check for i, j < n, m
 				for (i = rowBlock; (i < rowBlock + 16) && (i < N); i ++) {
+          // Same for columns also
 					for (j = colBlock; (j < colBlock + 16) && (j < M); j ++) {
-						if (i != j) {
+            // Checks if diagonal
+						if (i != j) { // if not, sets tranposed element to correct place
 							B[j][i] = A[i][j];
 						}
-						else {
+						 else { // otherwise holds on to it to avoid a cache miss
+							//Reduce misses m < i*j in B by storing in temp instead of missing in B[j][i]
 							temp = A[i][j];
 							diag = i;
 						}
 					}
+					// If at diagonal, sets the diagonal we held on to before
 					if (rowBlock == colBlock) {
+						//Misses in B reduced to m < i
 						B[diag][diag] = temp;
 					}
 				}
-	 		}
+			}
 		}
 	}
-}
-
-/*
- * You can define additional transpose functions below. We've defined
- * a simple one below to help you get started.
- */
-
-/*
- * trans - A simple baseline transpose function, not optimized for the cache.
- */
-char trans_desc[] = "Simple row-wise scan transpose";
-void trans(int M, int N, int A[N][M], int B[M][N])
-{
-    int i, j, tmp;
-
-    for (i = 0; i < N; i++) {
-        for (j = 0; j < M; j++) {
-            tmp = A[i][j];
-            B[j][i] = tmp;
-        }
-    }
-
 }
 
 /*
@@ -151,9 +156,6 @@ void registerFunctions()
 {
     /* Register your solution function */
     registerTransFunction(transpose_submit, transpose_submit_desc);
-
-    /* Register any additional transpose functions */
-    registerTransFunction(trans, trans_desc);
 
 }
 

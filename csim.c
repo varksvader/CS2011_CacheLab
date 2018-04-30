@@ -7,11 +7,7 @@
 
 // Nils Backe nabacke
 // Varnika Sinha vsinha2
-// Team name: i_need_arrays
-
-/* Remember all commenting rules apply!
-   - Create header comments for functions
-*/
+// Team name: nabacke_vsinha2 (i_need_arrays)
 
 /* Ideas/Outline:
    - Create a function reading the command line arguments (should also be in a
