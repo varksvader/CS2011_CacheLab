@@ -39,7 +39,7 @@ int is_transpose(int M, int N, int A[N][M], int B[M][N]);
  */
 char transpose_submit_desc[] = "Transpose submission";
 void transpose_submit(int M, int N, int A[N][M], int B[M][N]) {
-  int i, j, rowBlock, colBlock; // i is the row number, j is the columns number
+  int i, j, rowBlock, colBlock; // i is the row number, j is the column number
 	int diag = 0;
 	int temp = 0; // variable to hold diagonal
 	/* The access pattern for the defined problem sizes incorporate blocking;
@@ -50,8 +50,8 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N]) {
 		//
 		for (colBlock = 0; colBlock < N; colBlock += 8) {
 			for (rowBlock = 0; rowBlock < N; rowBlock += 8) {
-				for (i = rowBlock; i < rowBlock + 8; i ++) {
-					for (j = colBlock; j < colBlock + 8; j ++) {
+				for (i = rowBlock; i < rowBlock + 8; i++) {
+					for (j = colBlock; j < colBlock + 8; j++) {
 						if (i != j) {
 							B[j][i] = A[i][j];
 						}
@@ -75,8 +75,8 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N]) {
 		for (colBlock = 0; colBlock < N; colBlock += 4) {
 			for (rowBlock = 0; rowBlock < N; rowBlock += 4) {
 				//Iterate over each row using row-major iteration
-				for (i = rowBlock; i < rowBlock + 4; i ++) {
-					for (j = colBlock; j < colBlock + 4; j ++) {
+				for (i = rowBlock; i < rowBlock + 4; i++) {
+					for (j = colBlock; j < colBlock + 4; j++) {
 						if (i != j) {
 							B[j][i] = A[i][j];
 						}
